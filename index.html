@@ -1545,14 +1545,14 @@ function resultBm() {
     e = JSON.parse(t); if (!e || e.v !== 1 || !e.rows) throw 0;
   } catch (err) { alert('붙여 넣은 내용을 읽지 못했습니다. 클리닉 트래커의 "학원관리시스템용 복사" 버튼으로 다시 복사해 주세요.'); return; }
   var tb = $('#tb_list1'), put = function (o, c, v) { tb.SetNameValue(o, c, v); };
-  var sk = function (x) { return String(x || '').replace(/\s+/g, '').replace(/여자고등학교$/, '여고').replace(/고등학교$/, '고'); };
-  var nk = function (x) { return String(x || '').replace(/\(.*?\)\s*$/, '').replace(/\s+/g, ''); };
+  var sk = function (x) { return String(x || '').replace(/\s+/g, '').replace(/여자고등학교$/, '여고').replace(/고등학교$/, '고').replace(/여자중학교$/, '여중').replace(/중학교$/, '중'); };
+  var nk = function (x) { return String(x || '').replace(/[\(\[].*?[\)\]]\s*$/, '').replace(/\s+/g, ''); };
   var esc = function (x) { return String(x).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
   var kd = function (d) { var p = String(d).split('-'); return (+p[1]) + '월 ' + (+p[2]) + '일'; };
   var pd = ''; try { pd = String($('#txt_yyyymmdd').val() || ''); } catch (x) { pd = ''; }
   if (e.d && /^\d{4}-\d{2}-\d{2}$/.test(pd) && pd !== e.d && !confirm('맥가이 화면 날짜(' + kd(pd) + ')와 트래커에서 고른 날짜(' + kd(e.d) + ')가 다릅니다.\n그래도 넣을까요?')) return;
   var want = {};
-  e.rows.forEach(function (r) { var sc = sk(r.s); if (!/고$/.test(sc)) sc += '고'; want[nk(r.n) + '|' + sc] = { n: String(r.n), s: sc, m: String(r.m), a: !!r.a, t: /^\d{2}:\d{2}$/.test(String(r.t || '')) ? String(r.t) : '' }; });
+  e.rows.forEach(function (r) { var sc = sk(r.s); if (!/[고중]$/.test(sc)) sc += '고'; want[nk(r.n) + '|' + sc] = { n: String(r.n), s: sc, m: String(r.m), a: !!r.a, t: /^\d{2}:\d{2}$/.test(String(r.t || '')) ? String(r.t) : '' }; });
   var tm = function (w) { return w.a ? '15:00' : (w.t || '15:00'); };
   var CK = 'clinicTrkStu', cache = {};
   try { cache = JSON.parse(localStorage.getItem(CK) || '{}') || {}; } catch (x) { cache = {}; }
@@ -2862,8 +2862,8 @@ function attBm() {
   } catch (e) { alert('출석 명단을 읽지 못했어요. 맥가이에서 검색을 한 번 누른 뒤 다시 눌러 주세요.'); }
 }
 function attBookmarkHref() { return 'javascript:' + encodeURIComponent('(' + attBm.toString().replace('__TRACKER_URL__', location.origin + location.pathname) + ')()'); }
-function attSchoolKey(s) { return String(s || '').replace(/\s+/g, '').replace(/여자고등학교$/, '여고').replace(/고등학교$/, '고'); }
-function attNameKey(s) { return String(s || '').replace(/\(.*?\)\s*$/, '').replace(/\s+/g, ''); }
+function attSchoolKey(s) { return String(s || '').replace(/\s+/g, '').replace(/여자고등학교$/, '여고').replace(/고등학교$/, '고').replace(/여자중학교$/, '여중').replace(/중학교$/, '중'); }
+function attNameKey(s) { return String(s || '').replace(/[\(\[].*?[\)\]]\s*$/, '').replace(/\s+/g, ''); }
 function attLoad() {
   try { var a = JSON.parse(store_get('att') || 'null'); if (!a || !Array.isArray(a.l)) return null; return { day: a.d || localDay(new Date(a.t || 0).toISOString()), at: a.t || 0, list: a.l }; } catch (e) { return null; }
 }
@@ -3140,7 +3140,7 @@ function resultRowsForDay(day, school) {
   return kept;
 }
 var MARK = { A: '○', B: '△', F: '✕', N: '미지참' };
-function fullSchool(sc) { return sc === '경복' ? '경복여고' : /고$/.test(sc) ? sc : sc + '고'; }
+function fullSchool(sc) { return sc === '경복' ? '경복여고' : /[고중]$/.test(sc) ? sc : sc + '고'; }
 function getNote(set) { return set.note || ''; }
 var noteTimer = {};
 function queueNoteSave(setId) {
@@ -3723,11 +3723,14 @@ function parseTags(text) {
   }) };
 }
 
-function shortSchool(t) { return String(t || '').trim().replace(/\d+$/, '').replace(/(여자고등학교|고등학교|여고|고)$/, ''); }
+function shortSchool(t) { return String(t || '').trim().replace(/\d+$/, '').replace(/여자중학교$/, '여중').replace(/중학교$/, '중').replace(/(여자고등학교|고등학교|여고|고)$/, ''); }
 function parseRosterLine(line, known) {
   var toks = line.split(/[\t,]+|\s+/).filter(Boolean);
-  var isSchool = function (t) { return /(여자고등학교|고등학교|여고|고)\d*$/.test(t) || /^[가-힣]{2,}\d+$/.test(t) || (known || []).indexOf(t) >= 0 || (known || []).indexOf(shortSchool(t)) >= 0; };
+  var isKnown = function (t) { return (known || []).indexOf(t) >= 0 || (known || []).indexOf(shortSchool(t)) >= 0; };
+  var isSchool = function (t) { return /(여자고등학교|고등학교|여고|고|여자중학교|중학교|여중|중)\d*$/.test(t) || /^[가-힣]{2,}\d+$/.test(t) || isKnown(t); };
   var si = -1;
+  toks.forEach(function (t, i) { if (si < 0 && isKnown(t.replace(/\(.*?\)$/, ''))) si = i; });   // 이미 있는 학교 이름을 먼저
+  toks.forEach(function (t, i) { if (si < 0 && /(학교|여고|여중)\d*$/.test(t.replace(/\(.*?\)$/, ''))) si = i; });   // 그다음 '○○중학교'처럼 분명한 이름
   toks.forEach(function (t, i) { if (si < 0 && isSchool(t.replace(/\(.*?\)$/, ''))) si = i; });
   if (si < 0 && toks.length >= 2) si = 0;
   var school = si >= 0 ? shortSchool(toks[si]) : '';
@@ -3986,7 +3989,7 @@ function onClick(ev) {
       A.edit.items = p.items; A.edit.zeroOk = false;
       if (p.meta.school) {
         var sc0 = String(p.meta.school).trim(), roster = A.data.students.map(function (x) { return x.school; });
-        if (roster.indexOf(sc0) < 0) { var sc1 = sc0.replace(/(여자고등학교|고등학교|여고|고)$/, ''); if (roster.indexOf(sc1) >= 0) sc0 = sc1; }
+        if (roster.indexOf(sc0) < 0) { var sc1 = sc0.replace(/여자중학교$/, '여중').replace(/중학교$/, '중').replace(/(여자고등학교|고등학교|여고|고)$/, ''); if (roster.indexOf(sc1) >= 0) sc0 = sc1; }
         A.edit.school = sc0;
       }
       if (p.meta.week) A.edit.week = A.edit.week || p.meta.week;
